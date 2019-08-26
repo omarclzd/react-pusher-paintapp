@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import { v4 } from "uuid";
+import Pusher from "pusher-js";
 
 class Canvas extends Component {
   constructor(props) {
@@ -7,6 +8,9 @@ class Canvas extends Component {
     this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseMove = this.onMouseMove.bind(this);
     this.endPaintEvent = this.endPaintEvent.bind(this);
+    this.pusher = new Pusher("ba365c27310725cb60ec", {
+      cluster: "us3"
+    });
   }
 
   isPainting = false;
@@ -83,11 +87,20 @@ class Canvas extends Component {
     this.ctx.lineJoin = "round";
     this.ctx.lineCap = "round";
     this.ctx.lineWidth = 5;
+
+    const channel = this.pusher.subscribe("painting");
+    channel.bind("draw", data => {
+      const { userId, line } = data;
+      if (userId !== this.userId) {
+        line.forEach(position => {
+          this.paint(position.start, position.stop, this.guestStrokeStyle);
+        });
+      }
+    });
   }
   render() {
     return (
       <canvas
-        // We use the ref attribute to get direct access to the canvas element.
         ref={ref => (this.canvas = ref)}
         style={{ background: "black" }}
         onMouseDown={this.onMouseDown}
